@@ -3,40 +3,54 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MESYF Church - Conectando</title>
+    <title>MESYF Church - Acceso</title>
     <style>
-        body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: #f4f4f9; color: #333; }
-        .container { text-align: center; padding: 20px; border-radius: 8px; background: white; shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .spinner { border: 4px solid rgba(0, 0, 0, 0.1); width: 36px; height: 36px; border-radius: 50%; border-left-color: #09f; animation: spin 1s linear infinite; margin: 10px auto; }
+        body { font-family: -apple-system, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: #f0f2f5; }
+        .card { text-align: center; background: white; padding: 2rem; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 80%; max-width: 400px; }
+        .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #007bff; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .error-btn { display: none; background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin-top: 15px; cursor: pointer; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="spinner"></div>
-        <h2>Conectando al servidor de MESYF...</h2>
-        <p>Por favor, espera un momento.</p>
+    <div class="card" id="status-card">
+        <div class="spinner" id="loader"></div>
+        <h2 id="msg">Conectando con MESYF...</h2>
+        <p id="submsg">Sincronizando túnel seguro</p>
+        <div id="retry-btn" class="error-btn" onclick="location.reload()">Reintentar Conexión</div>
     </div>
 
     <script>
-        // Intentamos leer el archivo url.txt que el script de Android actualizará
-        fetch('url.txt?t=' + str(new Date().getTime())) // Evitamos el caché del navegador
-            .then(response => {
-                if (!response.ok) throw new Error('No se pudo encontrar la URL activa.');
-                return response.text();
-            })
-            .then(url => {
-                const cleanUrl = url.trim();
-                if (cleanUrl.startsWith('https://')) {
-                    window.location.href = cleanUrl;
-                } else {
-                    document.body.innerHTML = "<h2>Error: Servidor fuera de línea</h2><p>Vuelve a intentarlo en unos minutos.</p>";
-                }
-            })
-            .catch(error => {
-                console.error(error);
-                document.body.innerHTML = "<h2>Estado: Servidor en mantenimiento</h2>";
-            });
+        const startTime = Date.now();
+        const timeout = 5000; // 5 segundos exactos
+
+        function checkUrl() {
+            const now = Date.now();
+            
+            // Si pasaron más de 5 segundos, mostramos error
+            if (now - startTime > timeout) {
+                document.getElementById('loader').style.display = 'none';
+                document.getElementById('msg').innerText = "Servidor no disponible";
+                document.getElementById('submsg').innerText = "GitHub está procesando la última actualización. Espera un momento.";
+                document.getElementById('retry-btn').style.display = 'inline-block';
+                return;
+            }
+
+            fetch('url.txt?t=' + now)
+                .then(res => res.text())
+                .then(url => {
+                    const cleanUrl = url.trim();
+                    // Verificamos que sea una URL de Cloudflare válida y no una vieja
+                    if (cleanUrl.includes('trycloudflare.com')) {
+                        window.location.href = cleanUrl;
+                    } else {
+                        setTimeout(checkUrl, 1000); // Reintenta cada segundo
+                    }
+                })
+                .catch(() => setTimeout(checkUrl, 1000));
+        }
+
+        checkUrl();
     </script>
 </body>
 </html>
